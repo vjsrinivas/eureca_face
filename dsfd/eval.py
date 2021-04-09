@@ -6,10 +6,15 @@ import time
 import face_detection
 import argparse
 from tqdm import tqdm
+import imageprocessing as ip
 
 def parseArgs():
     parser = argparse.ArgumentParser()
     parser.add_argument('--val_file', type=str)
+    parser.add_argument('--noise', type=str, default='', required=False)
+    parser.add_argument('--noise_param', type=str, default='', required=False)
+    parser.add_argument('--correction', type=str, default="", required=False)
+    parser.add_argument('--correction_param', type=str, required=False)
     return parser.parse_args()
 
 def draw_faces(im, bboxes):
@@ -49,6 +54,15 @@ if __name__ == "__main__":
             output_file = '/'.join(output_arr)
             image_name = val.split('/')[-1].replace('.jpg', '')
             im = cv2.imread(val)
+
+            if args.correction != '':
+                # range is done one-at-a-time, looped in the bash script
+                crange = float(args.correction_param)
+                if args.correction == 'median':
+                    im = ip.median(im, int(crange))
+                elif args.correction == 'nlm':
+                    im = ip.nonlocal_means(im, crange)
+
             dets = detector.detect(
                 im[:, :, ::-1]
             )[:,:]
