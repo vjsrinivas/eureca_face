@@ -96,6 +96,14 @@ def median(image, median_size):
     image = cv2.medianBlur(image,median_size)
     return image
 
+def median2(image, median_size):
+    r,g,b = image[:,:,0], image[:,:,1], image[:,:,2]
+    _r = scipy.ndimage.median_filter(r,median_size)
+    _g = scipy.ndimage.median_filter(g,median_size)
+    _b = scipy.ndimage.median_filter(b,median_size) 
+    image[:,:,0], image[:,:,1], image[:,:,2] = _r, _g, _b
+    return image
+
 def nonlocal_means(image, h_lum):
     out_image = cv2.fastNlMeansDenoisingColored(image, None, h_lum, 10, 21, 7)
     return out_image
