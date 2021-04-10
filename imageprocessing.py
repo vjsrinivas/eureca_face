@@ -86,11 +86,14 @@ def ssim_list(list_of_imgs, orig_img):
 
 # corrections:
 def median(image, median_size):
+    '''
     r,g,b = image[:,:,0], image[:,:,1], image[:,:,2]
     _r = scipy.ndimage.median_filter(r,median_size)
     _g = scipy.ndimage.median_filter(g,median_size)
     _b = scipy.ndimage.median_filter(b,median_size) 
     image[:,:,0], image[:,:,1], image[:,:,2] = _r, _g, _b
+    '''
+    image = cv2.medianBlur(image,median_size)
     return image
 
 def nonlocal_means(image, h_lum):
