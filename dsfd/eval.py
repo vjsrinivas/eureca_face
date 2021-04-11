@@ -2,10 +2,12 @@ from ast import parse
 import glob
 import os
 import cv2
+import sys
 import time
 import face_detection
 import argparse
 from tqdm import tqdm
+sys.path.append('../')
 import imageprocessing as ip
 
 def parseArgs():
