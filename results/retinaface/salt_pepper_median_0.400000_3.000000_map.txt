@@ -1,0 +1,3 @@
+easy_val,0.170609
+medium_val,0.225871
+hard_val,0.259980

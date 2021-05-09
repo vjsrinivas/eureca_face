@@ -4,6 +4,9 @@ import cv2
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import argparse
+
+from scipy.special.orthogonal import legendre
+
 from preprocessing import readNoiseText
 import numpy as np
 import copy
@@ -11,6 +14,7 @@ import copy
 def parseArgs():
     parser = argparse.ArgumentParser()
     parser.add_argument('--noise_file', type=str, default='noise.txt')
+    parser.add_argument('--correction_file', type=str, default='corrections.txt')
     parser.add_argument('--result_dir', type=str, default='./results')
     return parser.parse_args()
 
@@ -106,6 +110,131 @@ def graph_1(noise_dict, result_root, models):
         plt.tight_layout()
         plt.savefig('./results/graphs/overview_%s_graph.png'%item[0])
 
+def graph_3(noise_dict, correct_dict, result_root, models):
+    def sort_inner(x):
+        return x[0]
+
+    val_weights = [0.33,0.33,0.33]
+
+    # assemble all maps from result_root:
+    for correct in correct_dict.items():
+        for noise in noise_dict.items():
+            for mod in models:
+                fig = plt.figure(figsize=(10,5.5))
+                x = copy.copy(correct[1])
+                legend = []
+                
+                colors = cm.rainbow(np.linspace(0,1,len(noise[1])+1))
+                noise_map = []
+                
+                for noi in noise[1]:
+                    legend.append('%s @ %f'%(determineProperName(noise[0]), noi))
+                    mAP = []
+
+                    # grab noise-only value to represent the baseline
+                    default_path = os.path.join(result_root, mod, "%s_%0.6f_map.txt"%(noise[0], noi))
+                    avg = 0
+                    with open(default_path, 'r') as f:
+                        contents = list(map(str.strip, f.readlines()))
+                        for i, con in enumerate(contents):
+                            cat, val = con.split(',')
+                            val = float(val)
+                            avg += val*val_weights[i]
+                    mAP.append(avg)
+
+                    for cor in correct[1]:
+                        #print(correct)
+                        _path = os.path.join(result_root, mod, "%s_%s_%0.6f_%0.6f_map.txt"%(noise[0], correct[0], noi, cor) )
+                        print(_path)
+                        with open(_path, 'r') as f:
+                            contents = list(map(str.strip, f.readlines()))
+                            avg = 0
+                            for i, con in enumerate(contents):
+                                cat, val = con.split(',')
+                                val = float(val)
+                                avg += val*val_weights[i]
+                            mAP.append(avg)
+                    noise_map.append(mAP)
+
+                # add the default on the y:
+                x.insert(0, 1)
+
+                # plot out:
+                for c, _noise in enumerate(noise_map):
+                    print(x, _noise)
+                    plt.plot(x, _noise, color=colors[c])
+                
+                if correct[0] == 'median':
+                    plt.xlabel('Kernel Size')
+                elif correct[0] == 'nplf':
+                    plt.xlabel('Non-linear Mean Filter')
+
+                plt.ylabel('mAP (%)')
+                plt.title('Correcting %s with %s on %s'%(determineProperName(noise[0]), determineProperName(correct[0]), determineProperName(mod)))
+                plt.xticks(x)
+                plt.ylim([0,1])
+                plt.legend(legend, bbox_to_anchor=(1.05, 1), loc='upper left')
+                plt.tight_layout()
+
+                plt.savefig('./results/graphs/overview_%s_%s_%s.png'%(correct[0], noise[0], mod))
+
+# for histogram equiliazation only:
+def graph_4(noise_dict, result_root, models):
+    val_weights = [0.33,0.33,0.33]
+    colors = ['red', 'orange']
+    legend = ['Baseline', 'Histogram Equalization']
+
+    for i, noise in enumerate(noise_dict.items()):
+        for mod in models:
+            mAP = []
+            fig = plt.figure(figsize=(10,5.5))
+            x = noise[1]
+            baseline = {'easy_val':[], 'medium_val':[], 'hard_val':[], 'avg':[]}
+            
+            for noi in noise[1]:
+                # grab noise-only value to represent the baseline
+                default_path = os.path.join(result_root, mod, "%s_%0.6f_map.txt"%(noise[0], noi))
+                print(default_path)
+                avg = 0
+                with open(default_path, 'r') as f:
+                    contents = list(map(str.strip, f.readlines()))
+                    for i, con in enumerate(contents):
+                        cat, val = con.split(',')
+                        val = float(val)
+                        avg += val*val_weights[i]
+                        #baseline[cat].append(val)
+                    baseline['avg'].append(avg)
+            mAP.append(baseline)
+            
+            line = {'easy_val':[], 'medium_val':[], 'hard_val':[], 'avg':[]}
+            for noi in noise[1]:
+                avg = 0
+                _path = os.path.join(result_root, mod, "%s_%s_%0.6f_%0.6f_map.txt"%(noise[0], 'he', noi, 0) )
+                with open(_path, 'r') as f:
+                    contents = list(map(str.strip,f.readlines()))
+                    for i, con in enumerate(contents):
+                        cat, val = con.split(',')
+                        val = float(val)
+                        avg += val*val_weights[i]
+                        line[cat].append(val)
+                    line['avg'].append(avg)
+            mAP.append(line)
+
+            for j, m in enumerate(mAP):
+                for val in m.items():
+                    if val[1] != 'avg':
+                        pass
+                        #plt.plot(val[1], color='cornflowerblue')
+                plt.plot(x, m['avg'], color=colors[j])
+            plt.legend(legend, bbox_to_anchor=(1.05, 1), loc='upper left')
+            plt.ylabel('mAP (%)')
+            plt.title('Correcting %s with %s on %s'%(determineProperName(noise[0]), 'Histogram Equalization', determineProperName(mod)))
+            plt.xticks(x)
+            plt.ylim([0,1])
+            plt.tight_layout()
+            #plt.show()
+            plt.savefig('./results/graphs/overview_%s_%s_%s.png'%('he', noise[0], mod))
+
 def determineXLabel(input_str):
     if input_str == 'gaussian_noise':
         return 'Standard Deviation'
@@ -115,6 +244,8 @@ def determineXLabel(input_str):
         return 'Lambda'
     elif input_str == 'speckle':
         return 'Uniform Low Value'
+    elif input_str == 'gamma':
+        return 'Gamma Shape'
 
 
 def determineProperName(input_str):
@@ -126,6 +257,16 @@ def determineProperName(input_str):
         return 'Poisson'
     elif input_str == 'speckle':
         return 'Speckle'
+    elif input_str == 'median':
+        return 'Median'
+    elif input_str == 'gamma':
+        return 'Gamma'
+    elif input_str == 'he':
+        return 'Histogram Equalization'
+    elif input_str == 'dsfd':
+        return 'DSFD'
+    elif input_str == 'retinaface':
+        return 'RetinaFace'
     else:
         raise Exception('Invalid input_str specified!')
 
@@ -136,7 +277,12 @@ if __name__ == '__main__':
     with open(args.noise_file, 'r') as f:
         contents = list(map(str.strip, f.readlines()))
         noise_dict = readNoiseText(contents)
+
+    with open(args.correction_file, 'r') as f:
+        contents = list(map(str.strip, f.readlines()))
+        correction_list = readNoiseText(contents)
     
-    #graph_2(noise_dict, args.result_dir)
+    graph_2(noise_dict, args.result_dir)
     graph_1(noise_dict, args.result_dir, ['retinaface', 'tinaface', 'dsfd'])
-        
+    graph_3(noise_dict, correction_list, args.result_dir, ['retinaface', 'dsfd'])
+    graph_4(noise_dict, args.result_dir, ['retinaface', 'dsfd'])

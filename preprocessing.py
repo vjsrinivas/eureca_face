@@ -23,6 +23,8 @@ def generateNoiseImage(input_path, output_path, noise, level):
         _img = ip.poisson(img, level)
     elif noise == 'speckle':
         _img = ip.speckle(img, 0.3, level)
+    elif noise == 'gamma':
+        _img = ip.gamma(img, level)
     else:
         raise Exception('Specified noise invalid!')
     cv2.imwrite(output_path, _img)

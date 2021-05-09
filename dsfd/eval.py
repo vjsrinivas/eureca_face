@@ -49,11 +49,15 @@ if __name__ == "__main__":
     with open(args.val_file) as f:
         val_files = list(map(str.strip, f.readlines()))
         for val in tqdm(val_files):
-            output_file = val.replace('images', 'detections')
-            output_arr = output_file.split('/')
-            output_arr.insert(-2, 'dsfd')
-            output_arr[-1] = output_arr[-1].replace('jpg', 'txt')
-            output_file = '/'.join(output_arr)
+            if args.correction != '':
+                image_id = val.replace('jpg', 'txt').split('/')[-2:]
+                output_file= os.path.join('../CORRECTIONS', '%s_%s'%(args.noise, args.correction), "%s_%s"%(args.noise_param, args.correction_param), 'dsfd', '/'.join(image_id))
+            else:
+                output_file = val.replace('images', 'detections')
+                output_arr = output_file.split('/')
+                output_arr.insert(-2, 'dsfd')
+                output_arr[-1] = output_arr[-1].replace('jpg', 'txt')
+                output_file = '/'.join(output_arr)
             image_name = val.split('/')[-1].replace('.jpg', '')
             im = cv2.imread(val)
 
@@ -64,6 +68,8 @@ if __name__ == "__main__":
                     im = ip.median(im, int(crange))
                 elif args.correction == 'nlm':
                     im = ip.nonlocal_means(im, crange)
+                elif args.correction == 'he':
+                    im = ip.hist_equalization(im)
 
             dets = detector.detect(
                 im[:, :, ::-1]

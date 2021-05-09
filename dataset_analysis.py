@@ -12,6 +12,7 @@ from tqdm import tqdm
 
 ROOT='./WIDERFACE/WIDER_val/'
 NOISE_TEXT='noise.txt'
+CORRECT_TEXT='corrections.txt'
 WIDER_test = os.path.join(ROOT, 'wider_face_split')
 WIDER_val = os.path.join(ROOT, 'WIDER_val')
 WIDER_train = os.path.join(ROOT, 'WIDER_train')
@@ -47,7 +48,7 @@ def vizDetBatchImages(noises, levels, image_path, random_img=False):
             print(det)
 
 def displayNoiseMatrix(img, noise_list, range):
-    fig, ax = plt.subplots(1,5)
+    fig, ax = plt.subplots(1,5, figsize=(10,5))
     ax[0].imshow(img[130:250,130:250,:])
     ax[0].set_title('Original Image')
     ax[0].axis('off')
@@ -63,13 +64,17 @@ def displayNoiseMatrix(img, noise_list, range):
         elif noise == 'poisson':
             o_img = ip.poisson(r_img, range[i])
             text = 'Poisson'
-        else:
+        elif noise == 'speckle':
             o_img = ip.speckle(r_img, 0.3, 1.5)
             text = 'Speckle'
+        elif noise == 'gamma':
+            o_img = ip.gamma(r_img, 100)
+            text = 'Gamma'
         ax[i+1].imshow(o_img[130:250,130:250,:])
         ax[i+1].set_title(text)
         ax[i+1].axis('off')
-    plt.show()
+    plt.tight_layout()
+    plt.savefig('./results/graphs/noise_matrix.png')
 
 def displaySSIMDemo(img, noise, range_list):
     r_img = np.copy(img)
@@ -84,7 +89,7 @@ def displaySSIMDemo(img, noise, range_list):
             ax[i].imshow(out_img[130:250,130:250,:])
             ax[i].axis('off')
             ax[i].set_title('SSIM: %0.6f'%(ssim_value))
-    plt.savefig('ssim_demo.png')
+    plt.savefig('./results/graphs/ssim_demo.png')
 
 def displayMedianDemo(img, range_list):
     # destroyed image: img
@@ -96,7 +101,7 @@ def displayMedianDemo(img, range_list):
         ax[i].axis('off')
         ax[i].set_title("Filter Size: %d"%r)
 
-    plt.savefig('median_demo.png')
+    plt.savefig('./results/graphs/median_demo.png')
 
 def displayNLMF(img, range_list):
     # destroyed image: img
@@ -183,6 +188,9 @@ def displayAveragedSSIM(noises, range_list):
                 elif noise == 'speckle':
                     x_label = 'Uniform High' 
                     noise_title = 'Speckle Noise'
+                elif noise == 'gamma':
+                    x_label = 'Shape' 
+                    noise_title = 'Gamma Noise'
 
                 img_list.append(out_img)
 
@@ -208,30 +216,156 @@ def displayAveragedSSIM(noises, range_list):
     #plt.savefig('./results/graphs/ssim_comparison.png')
     plt.savefig('./results/graphs/ssim_avg_comparison.png')
 
+
+def exampleDegradeRecover(image_path, noise, correction_dict):
+    CORRECT_DIR = './CORRECTIONS/salt_pepper_median/'
+    img = cv2.imread(image_path)
+    image_id = image_path.split('/')[-1].replace('.jpg', '.txt')
+    folder_name = image_path.split('/')[-2]
+    
+    median_list = correction_dict['median']
+    fig, ax = plt.subplots(1,len(median_list)+1, figsize=(20,10))
+
+    # default image:
+    with open('./NOISES/salt_pepper/%0.6f/detections/retinaface/%s/%s'%(noise,folder_name,image_id), 'r') as f:
+            content = list(map(str.strip,f.readlines()))
+            bbox = []
+            for con in content[2:]:
+                x,y,w,h,conf = con.split(' ')
+                x,y,w,h,conf = int(x), int(y), int(w), int(h), float(conf)
+                bbox.append((x,y,w,h,conf))
+
+    d_img = np.copy(img)
+    bb_len = 0
+    for bb in bbox:
+        if bb[4] > 0.20:
+            cv2.rectangle(d_img, (bb[0], bb[1]), (bb[0]+bb[2], bb[1]+bb[3]), (0,0,255), 3)
+            bb_len += 1
+    d_img = cv2.cvtColor(d_img, cv2.COLOR_RGB2BGR)
+    ax[0].imshow(d_img)
+    ax[0].set_xlabel('Faces Detected: %i'%(bb_len))
+    ax[0].set_title('Original Image')
+    ax[0].set_xticks([])
+    ax[0].set_xticks([], minor=True)
+    ax[0].set_yticks([])
+    ax[0].set_yticks([], minor=True)
+
+    i = 1
+    for med in median_list:
+        _ax = ax[i]
+        noise_det_path = os.path.join(CORRECT_DIR, "%0.6f_%0.6f"%(noise, med), "retinaface", folder_name, image_id)
+        with open(noise_det_path, 'r') as f:
+            content = list(map(str.strip,f.readlines()))
+            bbox = []
+            for con in content[2:]:
+                x,y,w,h,conf = con.split(' ')
+                x,y,w,h,conf = int(x), int(y), int(w), int(h), float(conf)
+                bbox.append((x,y,w,h,conf))
+
+        r_img = np.copy(img)
+        d_img = ip.median(r_img, int(med))
+        bb_len = 0
+        for bb in bbox:
+            if bb[4] > 0.20:
+                cv2.rectangle(d_img, (bb[0], bb[1]), (bb[0]+bb[2], bb[1]+bb[3]), (0,0,255), 3)
+                bb_len += 1
+
+        d_img = cv2.cvtColor(d_img, cv2.COLOR_RGB2BGR)
+        _ax.imshow(d_img)
+        _ax.set_xlabel('Faces Detected: %i'%(bb_len))
+        _ax.set_title('Median Filter @ %0.6f'%(med))
+        _ax.set_xticks([])
+        _ax.set_xticks([], minor=True)
+        _ax.set_yticks([])
+        _ax.set_yticks([], minor=True)
+        i += 1
+    plt.tight_layout()
+    plt.savefig('./results/graphs/median_fix_demo.png')
+
+def exampleDegradeHERecover(image_path):
+    WF_class = '1--Handshaking'
+    noise = 200
+    txt_name = image_path.replace('jpg', 'txt')
+    orig_txt_path = os.path.join('NOISES', 'gamma', '%0.6f'%(noise), 'detections', 'dsfd', WF_class, txt_name)
+    he_txt_path = os.path.join('CORRECTIONS', 'gamma_he', '%0.6f_%0.6f'%(noise, 0), 'retinaface', WF_class, txt_name)
+
+    he_path = os.path.join('NOISES', 'gamma', '%0.6f'%(noise), 'images', WF_class, image_path)
+    org_img = cv2.imread(he_path)
+    org_img = cv2.cvtColor(org_img, cv2.COLOR_BGR2RGB)
+    he_img = np.copy(org_img)
+    he_img = ip.hist_equalization(he_img)
+
+    with open(orig_txt_path, 'r') as f:
+        bb_org = 0
+        content = list(map(str.strip, f.readlines()))
+        for bbox in content[2:]:
+            x,y,w,h,c = bbox.split()
+            x,y,w,h,c = int(x), int(y), int(w), int(h), float(c)
+            if c > 0.2:
+                org_img = cv2.rectangle(org_img, (x,y), (x+w,y+h), (255,0,0), 2)
+                bb_org += 1
+
+    with open(he_txt_path, 'r') as f:
+        bb_he = 0
+        content = list(map(str.strip, f.readlines()))
+        for bbox in content[2:]:
+            x,y,w,h,c = bbox.split()
+            x,y,w,h,c = int(x), int(y), int(w), int(h), float(c)
+            if c > 0.2:
+                he_img = cv2.rectangle(he_img, (x,y), (x+w,y+h), (255,0,0), 2)
+                bb_he += 1
+
+    fig, ax = plt.subplots(1,2, figsize=(10,5))
+    ax[0].imshow(org_img)
+    ax[0].set_title('Original Image')
+    ax[0].set_xlabel('Faces Detected: %i'%(bb_org))
+    ax[1].imshow(he_img)
+    ax[1].set_title('Histogram Equalization')
+    ax[1].set_xlabel('Faces Detected: %i'%(bb_he))
+    
+    ax[0].set_xticks([])
+    ax[1].set_xticks([])
+    ax[0].set_yticks([])
+    ax[1].set_yticks([])
+    #plt.show()
+    plt.tight_layout()
+    plt.savefig('./results/graphs/he_fix_demo.png')
+
+
 if __name__ == '__main__':
     with open(NOISE_TEXT, 'r') as f:
         contents = f.readlines()
         noise_contents = list(map(str.strip, contents))
         noise_dict = readNoiseText(noise_contents)
     
+    with open(CORRECT_TEXT, 'r') as f:
+        contents = f.readlines()
+        correct_content = list(map(str.strip, contents))
+        correct_dict = readNoiseText(correct_content)
+    
     randomImage = 'dog.png'
     img = cv2.imread(randomImage)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
     # For SSIM Demo Image:
-    #noise_ranges = [noise for i, noise in enumerate(noise_dict['gaussian_noise']) if i % 3 == 0 ]
-    #displaySSIMDemo(img, "gaussian_noise", noise_ranges)
+    noise_ranges = [noise for i, noise in enumerate(noise_dict['gaussian_noise']) if i % 3 == 0 ]
+    displaySSIMDemo(img, "gaussian_noise", noise_ranges)
     
     # For showing Median Image Demo:
-    #displayMedianDemo(ip.gaussian(img, 50), [2,3,4,5])
+    displayMedianDemo(ip.gaussian(img, 50), [3,5,7,9])
     
     # For showing nonlocal-means filter:
-    #displayNLMF(ip.gaussian(img, 100), [10,30,50,70])
+    displayNLMF(ip.gaussian(img, 100), [10,30,50,70])
 
     # For showing Noises Demo:
-    #displayNoiseMatrix(img, list(noise_dict.keys()), [item[1][5] for item in noise_dict.items()])
+    displayNoiseMatrix(img, list(noise_dict.keys()), [item[1][4] for item in noise_dict.items()])
 
     # For showing SSIM Matrix:
     displayAveragedSSIM(noise_dict.keys(), [item[1] for item in noise_dict.items()])
 
-    #vizDetBatchImages('gaussian_noise', noise_dict['gaussian_noise'], './WIDERFACE/WIDER_val/images/0--Parade/0_Parade_marchingband_1_20.jpg')
+    # Viz of image degradation and recover with bbox:
+    noise = 0.50
+    exampleDegradeRecover('./NOISES/salt_pepper/%0.6f/images/61--Street_Battle/61_Street_Battle_streetfight_61_432.jpg'%noise, noise, correct_dict)
+
+    # For showing HE Example:
+    exampleDegradeHERecover('1_Handshaking_Handshaking_1_602.jpg')

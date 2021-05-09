@@ -1,3 +1,4 @@
+import time
 from unicodedata import combining
 import cv2
 import os
@@ -96,29 +97,58 @@ def median(image, median_size):
     image = cv2.medianBlur(image,median_size)
     return image
 
-def median2(image, median_size):
-    r,g,b = image[:,:,0], image[:,:,1], image[:,:,2]
-    _r = scipy.ndimage.median_filter(r,median_size)
-    _g = scipy.ndimage.median_filter(g,median_size)
-    _b = scipy.ndimage.median_filter(b,median_size) 
-    image[:,:,0], image[:,:,1], image[:,:,2] = _r, _g, _b
-    return image
+def gamma(image, gamma_shape): 
+    gamma_matrix = np.random.gamma(gamma_shape,1,size=image.shape)
+    
+    '''
+    import scipy.special as sps 
+    count, bins, ignored = plt.hist(gamma_matrix.ravel(), 50, density=True)
+    y = bins**(gamma_shape-1)*(np.exp(-bins/1) /  
+                        (sps.gamma(gamma_shape)*1**gamma_shape))
+    plt.plot(bins, y, linewidth=2, color='r')  
+    plt.show()
+    '''
+
+    combined = image+gamma_matrix
+    np.clip(combined, 0, 255, out=combined)
+    return combined.astype('uint8') 
+
 
 def nonlocal_means(image, h_lum):
     out_image = cv2.fastNlMeansDenoisingColored(image, None, h_lum, 10, 21, 7)
     return out_image
 
+def hist_equalization(image):
+    ycb = cv2.cvtColor(image, cv2.COLOR_RGB2YCR_CB)
+    ycb[:,:,0] = cv2.equalizeHist(ycb[:,:,0])
+    out_img = cv2.cvtColor(ycb, cv2.COLOR_YCR_CB2RGB)
+    #cv2.waitKey(-1)
+    return out_img
+
+def hist_equalization2(image):
+    hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+    hsv[:,:,2] = cv2.equalizeHist(hsv[:,:,2])
+    out_img = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
+    cv2.imshow('test2', out_img)
+    #cv2.waitKey(-1)
+    return out_img
+
 if __name__ == '__main__':
     img = cv2.imread('/home/vijay/Documents/devmk4/eureca/eureca_face/WIDERFACE/WIDER_val/images/0--Parade/0_Parade_marchingband_1_20.jpg')
     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-    params = [i/8 for i in range(-8,9,1)]
+    params = [0,40,80,120,160,200,240,280]
     print(params)
     print(params)
     imgs = []
     for p in params:
-        img2 = speckle(img, p, 1)
-        cv2.imshow('test', img2)
-        cv2.waitKey(-1)
-        imgs.append(img2)
+        img2 = gamma(img, p)
+        #cv2.imshow('test', img2)
+        #t1 = time.time()
+        #hist_equalization(img2)
+        #hist_equalization2(img2)
+        #t2 = time.time()
+        #print(t2-t1)
+        #cv2.waitKey(-1)
+        #imgs.append(img2)
 
-    ssim_graph(imgs, img, params)
+    #ssim_graph(imgs, img, params)
