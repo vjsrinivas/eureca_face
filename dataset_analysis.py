@@ -10,6 +10,11 @@ import random
 from scipy.io import loadmat
 from tqdm import tqdm
 
+from mpl_toolkits.axes_grid1 import ImageGrid
+from matplotlib import cm
+from matplotlib.patches import Rectangle
+import imageio
+
 ROOT='./WIDERFACE/WIDER_val/'
 NOISE_TEXT='noise.txt'
 CORRECT_TEXT='corrections.txt'
@@ -331,6 +336,114 @@ def exampleDegradeHERecover(image_path):
     plt.tight_layout()
     plt.savefig('./results/graphs/he_fix_demo.png')
 
+def animatedBanner(image_base, noise, noise_lvl_list, correction, correct_lvl_list, model='retinaface', MIN_CONF = 0.001):
+    org_img = cv2.imread(os.path.join('WIDERFACE/WIDER_val/images',image_base)) 
+    org_img = cv2.cvtColor(org_img, cv2.COLOR_BGR2RGB)
+
+    with open(os.path.join('NOISES/gaussian_noise/%0.6f/detections/%s'%(0, model),image_base.replace('.jpg', '.txt'))) as f:
+        content = list(map(str.strip,f.readlines()))
+        dets = []
+        for con in content[2:]:
+            x,y,w,h,conf = con.split(' ')
+            x,y,w,h,conf = int(x), int(y), int(w), int(h), float(conf)
+            dets.append((x,y,w,h,conf))
+
+    for j, n_lvl in enumerate(noise_lvl_list):
+
+        # grab noise image:
+        print(os.path.join('NOISES', noise, '%0.6f'%(n_lvl), 'images', image_base))
+        noise_img = cv2.imread(os.path.join('NOISES', noise, '%0.6f'%(n_lvl), 'images', image_base))
+        noise_img = cv2.cvtColor(noise_img, cv2.COLOR_BGR2RGB)
+
+        # grab dets from noise:
+        with open(os.path.join('NOISES', noise, '%0.6f'%(n_lvl), 'detections', model, image_base.replace('.jpg', '.txt'))) as f:
+            content = list(map(str.strip,f.readlines()))
+            noise_dets = []
+            for con in content[2:]:
+                x,y,w,h,conf = con.split(' ')
+                x,y,w,h,conf = int(x), int(y), int(w), int(h), float(conf)
+                noise_dets.append((x,y,w,h,conf))
+
+        for i,c_lvl in enumerate(correct_lvl_list):
+            
+            # correction image:
+            c_lvl = int(c_lvl)
+
+            if correction == 'median':
+                correct_img = ip.median(np.copy(noise_img), c_lvl)
+            elif correction == 'he':
+                correct_img = ip.hist_equalization(np.copy(noise_img))
+
+            # grab dets from corrected:
+            with open(os.path.join('CORRECTIONS', "%s_%s"%(noise, correction), '%0.6f_%0.6f'%(n_lvl, c_lvl), model, image_base.replace('.jpg', '.txt'))) as f:
+                content = list(map(str.strip,f.readlines()))
+                corr_dets = []
+                for con in content[2:]:
+                    x,y,w,h,conf = con.split(' ')
+                    x,y,w,h,conf = int(x), int(y), int(w), int(h), float(conf)
+                    corr_dets.append((x,y,w,h,conf))
+
+            #black_cover = np.ndarray(img.shape)
+            #black_cover.fill(0)
+            black_cm = cm.get_cmap('summer', len(noise_dets))
+
+            fig = plt.figure(figsize=(12,2))
+            axs = ImageGrid(fig, 111,  # similar to subplot(111)
+                        nrows_ncols=(1, 4),  # creates 2x2 grid of axes
+                        axes_pad=0.1,  # pad between axes in inch.
+                        cbar_location="right",
+                        cbar_mode='single',
+                        cbar_size='5%',
+                        cbar_pad=0.05
+                        )
+            
+            axs[0].imshow(org_img)
+            axs[1].imshow(org_img)
+            axs[2].imshow(noise_img)
+            axs[3].imshow(correct_img)
+
+            axs[0].set_title('Original Image', fontsize=10)
+            axs[1].set_title('Image Detections', fontsize=10)
+            axs[2].set_title('Salt & Pepper Noise @ %f'%n_lvl, fontsize=10)
+            axs[3].set_title('Corrected with Median @ %d'%c_lvl, fontsize=10)
+
+            for ax in axs:
+                ax.axes.xaxis.set_visible(False)
+                ax.axes.yaxis.set_visible(False)
+
+            # draw noise bboxes:
+            for bb in dets:
+                x1, y1, w, h, c = bb
+                rect = plt.Rectangle((x1,y1), w, h, fc='none', ec=black_cm(c))
+                axs[1].add_patch(rect)
+
+            # draw noise bboxes:
+            for bb in noise_dets:
+                x1, y1, w, h, c = bb
+                rect = plt.Rectangle((x1,y1), w, h, fc='none', ec=black_cm(c))
+                axs[2].add_patch(rect)
+
+            # draw correction bboxes:
+            for bb in corr_dets:
+                x1, y1, w, h, c = bb
+                rect = plt.Rectangle((x1,y1), w, h, fc='none', ec=black_cm(c))
+                axs[3].add_patch(rect)
+
+            sm = plt.cm.ScalarMappable(cmap='summer', norm=plt.Normalize(vmin=MIN_CONF, vmax=1))
+            fig.colorbar(sm, cax=axs.cbar_axes[0], label="Confidence")
+            fig.tight_layout()
+            plt.savefig('./tmp/%d_%d_frame.png'%(j,i))
+            plt.close()
+
+    # stitch for animation:
+    with imageio.get_writer('anim_header_1.gif', mode='I') as writer:
+        duration = 10
+        for i,_ in enumerate(noise_lvl_list):
+            for j,_ in enumerate(correct_lvl_list):
+                name = '%d_%d_frame.png'%(i,j)
+                for _ in range(duration):
+                    image = imageio.imread(os.path.join('tmp',name))
+                    writer.append_data(image)
 
 if __name__ == '__main__':
     with open(NOISE_TEXT, 'r') as f:
@@ -349,23 +462,26 @@ if __name__ == '__main__':
 
     # For SSIM Demo Image:
     noise_ranges = [noise for i, noise in enumerate(noise_dict['gaussian_noise']) if i % 3 == 0 ]
-    displaySSIMDemo(img, "gaussian_noise", noise_ranges)
+    #displaySSIMDemo(img, "gaussian_noise", noise_ranges)
     
     # For showing Median Image Demo:
-    displayMedianDemo(ip.gaussian(img, 50), [3,5,7,9])
+    #displayMedianDemo(ip.gaussian(img, 50), [3,5,7,9])
     
     # For showing nonlocal-means filter:
-    displayNLMF(ip.gaussian(img, 100), [10,30,50,70])
+    #displayNLMF(ip.gaussian(img, 100), [10,30,50,70])
 
     # For showing Noises Demo:
-    displayNoiseMatrix(img, list(noise_dict.keys()), [item[1][4] for item in noise_dict.items()])
+    #displayNoiseMatrix(img, list(noise_dict.keys()), [item[1][4] for item in noise_dict.items()])
 
     # For showing SSIM Matrix:
-    displayAveragedSSIM(noise_dict.keys(), [item[1] for item in noise_dict.items()])
+    #displayAveragedSSIM(noise_dict.keys(), [item[1] for item in noise_dict.items()])
 
     # Viz of image degradation and recover with bbox:
-    noise = 0.50
-    exampleDegradeRecover('./NOISES/salt_pepper/%0.6f/images/61--Street_Battle/61_Street_Battle_streetfight_61_432.jpg'%noise, noise, correct_dict)
+    #noise = 0.50
+    #exampleDegradeRecover('./NOISES/salt_pepper/%0.6f/images/61--Street_Battle/61_Street_Battle_streetfight_61_432.jpg'%noise, noise, correct_dict)
 
     # For showing HE Example:
-    exampleDegradeHERecover('1_Handshaking_Handshaking_1_602.jpg')
+    #exampleDegradeHERecover('1_Handshaking_Handshaking_1_602.jpg')
+
+    # For creating animation example of degradation and enhancement:
+    animatedBanner('61--Street_Battle/61_Street_Battle_streetfight_61_432.jpg', 'salt_pepper', [noise for i, noise in enumerate(noise_dict['salt_pepper'])], 'median', [correct for i, correct in enumerate(correct_dict['median'])])
