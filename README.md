@@ -1,20 +1,19 @@
 # EUReCA 2021 - Effects of Degradation on Face Detectors
 
 ## Table of Contents
----
-- Description
-- Abstract
-- Face Detectors
-- Degradation
-- Recovery
-- Results
-- Running Code
+- [Description](#Description)
+- [Abstract](#Abstract)
+- [Face Detectors](#Face_Detectors)
+- [Degradation](#Degradation)
+- [Recovery](#Recovery)
+- [Results](#Results)
+- [Running Code](#Running_Code)
 
 
 ![GIF showing animation of an unaltered image, its detection, a degrade image, and a corrected image](./results/graphs/anim_header_1.gif)
 
 ## Description:
-This project was done to complete one of my breadth requirements for the Tickle Engineering Honors program. The contents of the project were presented at the 2021 EUReCA Syposmium as a [poster](poster.pdf). To keep proper context, the project was completed within **less than a month** and is a continuation of adjacent, prior works regarding image degradation and Convolutional Neural Networks.
+This project was done to complete one of my breadth requirements for the Tickle Engineering Honors program. The contents of the project were presented at the 2021 EUReCA Symposium as a [poster](poster.pdf). To keep proper context, the project was completed within **less than a month** and is a continuation of adjacent, prior works regarding image degradation and Convolutional Neural Networks.
 
 ## Abstract
 
@@ -25,7 +24,7 @@ In this research project, we look into some of the standard image-based obstacle
 Additionally, we reconstruct the “degraded” image with various image processing methods in order to recover detection accuracy. Furthermore, we quantitatively establish connections between certain recovery methods, their intensity, as well as the intensity of the degradation with the ability to recover the detection accuracy.
 
 
-## Face Detectors In Use:
+## Face Detectors:
 - TinaFace (part of VedaDetector)
 	
 	- **Description:** TinaFace is the SoTA (as of this writing) in terms of realtime face detection on the WIDERFACE testset. The model utilizes recent advancements in general object detection and frames the face detection task as a "small-object" detection task.  
@@ -39,7 +38,7 @@ Additionally, we reconstruct the “degraded” image with various image process
 	- **Description:** DSFD was a model created by 
 	- **Note:** The DSFD used in this project was a optimized version, which was ~9% off the original DSFD WIDERFACE validation score (81% vs 89% on the hard-set). The DSFD network utilizes "better feature learning, progressive loss design, and anchor assign based data augmentation."
 
-### Degradation:
+### Degradation
 
 ![Diagram showing the effects of each degradation](./results/graphs/noise_matrix.png)
 
@@ -59,7 +58,7 @@ Additionally, we reconstruct the “degraded” image with various image process
 
 	- **Description:** This noise is similar to Poisson, but the noise distribution is varied by "gamma shape", and as the gamma shape increases, the image becomes more "white-washed". This is similar to increasing uniform gamma factor, where a higher gamma factor increases the brightness.
 
-### Recovery:
+### Recovery
 
 ![Example of recovery methods](./results/graphs/median_demo.png)
 
@@ -77,25 +76,25 @@ Additionally, we reconstruct the “degraded” image with various image process
 
 The following are graphs showing the decreasing shape of mAP as a given noise's intensity rises.
 
-### Gaussian Blur:
+### Gaussian Blur
 
 ![mAP Graph of Guassian Blur on all models](./results/graphs/overview_gaussian_noise_graph.png)
 
-### Salt & Pepper:
+### Salt & Pepper
 
 ![mAP Graph of Salt & Pepper on all models](./results/graphs/overview_salt_pepper_graph.png)
 
-### Poisson:
+### Poisson
 
 ![mAP Graph of Poisson on all models](./results/graphs/overview_poisson_graph.png)
 
-### Gamma:
+### Gamma
 
 ![mAP Graph of Gamma on all models](./results/graphs/overview_gamma_graph.png)
 
 The following are graphs representing the trend of recovery for each noise intensity of a given noise at a certain level of a correction. Median filter was applied to Salt & Pepper, Gaussian Blur, and Poisson while Histogram Equalization was applied to Gamma alone.
 
-### Retinaface:
+### Retinaface
 
 ![Graph showing correction improvements of gaussian noise with median filter](./results/graphs/overview_median_gaussian_noise_retinaface.png)
 
@@ -105,7 +104,7 @@ The following are graphs representing the trend of recovery for each noise inten
 
 ![Graph showing correction improvements of gamma with histogram equalization](./results/graphs/overview_he_gamma_retinaface.png)
 
-### DSFD:
+### DSFD
 
 ![Graph showing correction improvements of gaussian noise with median filter](./results/graphs/overview_median_gaussian_noise_dsfd.png)
 
@@ -115,11 +114,11 @@ The following are graphs representing the trend of recovery for each noise inten
 
 ![Graph showing correction improvements of gamma with histogram equalization](./results/graphs/overview_he_gamma_dsfd.png)
 
-### Tinaface:
+### Tinaface
 ``Uncompleted``
 
 
-## Conclusions:
+## Conclusions
 
 ![](./results/graphs/median_fix_demo.png)
 
@@ -129,26 +128,27 @@ The following are graphs representing the trend of recovery for each noise inten
 
 # Running Code
 
-## Environment Setup:
+## Environment Setup
 
 You will need to setup a standard Anaconda environment and run the following command to create the same environment that was used to run this code: ``conda env create -f requirements.yaml``
 
 After the conda environment is created, download the WIDERFACE dataset. The only portions you will need are the WIDERFACE validation dataset as well as the evaluation tools. Keep the original class-based folder structure and place both evaluation tool folders and the validation set ("WIDER_val") in a folder called "WIDERFACE".
 
-## Folder Structure:
+## Folder Structure
+
 - The direct children folders represent just the raw source codes from the detectors. I will have to take them apart and run them seperately inside the folder `eureca_face`.
 - `eureca_face` will contain all the major code that can/will be runnable from a fresh installation. It will hold the evaluation results and processed information.
 - `WIDERFACE` folder will hold ALL of the preprocessed images
 
-## Setting up CNNs:
+## Setting up CNNs
 
-### TinaFace:
+### TinaFace
 
-### RetinaFace:
+### RetinaFace
 
-### DSFD:
+### DSFD
 
-## Running Evaluations:
+## Running Evaluations
 
 Create the degraded images that we will be using (saves time during inferencing):
 
