@@ -78,7 +78,7 @@ The following are graphs showing the decreasing shape of mAP as a given noise's 
 
 ### Gaussian Blur
 
-![mAP Graph of Guassian Blur on all models](./results/graphs/overview_gaussian_noise_graph.png)
+![mAP Graph of Gaussian Blur on all models](./results/graphs/overview_gaussian_noise_graph.png)
 
 ### Salt & Pepper
 
@@ -120,9 +120,15 @@ The following are graphs representing the trend of recovery for each noise inten
 
 ## Conclusions
 
-![](./results/graphs/median_fix_demo.png)
+This project shows the degradation behavior that noises such as Gaussian Blur and Salt & Pepper have on highly-accurate face detectors. Salt & Pepper had an accuracy decrease "shape" resembling an inverted S-curve. I believe this is mainly due to the fact that sharp pixel-wise color changes, such as completely black or white, can have drastic effects on the feature extraction from the first set of convolution layers, which can have a cascading effect later on in the network.
 
-![](./results/graphs/he_fix_demo.png)
+For a similar reason, this is why you see tamer accuracy decrease "shapes" for Poisson and Gamma (although the later half of Gamma had a drastic decrease -- this is because at a certain point the white-washing had removed enough features to the point where the image is basically white to us).
+
+Gaussian noise had a neutral accuracy decrease "shape". I believe the reason for this is because the noise is colored and the distribution of colors at most noise levels are not large enough to drastically affect the original pixel color. Only at higher noise intensities do the values become significant enough for the original color values to significantly shift from their original "domain" of color. With this significant shift, an object's features will be unrecognizable. 
+
+![Example of median filter recovering detections from a image at a higher salt & pepper intensity](./results/graphs/median_fix_demo.png)
+
+![Example of histogram equalization recovering a moderate amount of faces from a very white-washed image](./results/graphs/he_fix_demo.png)
 
 ---
 
@@ -136,7 +142,7 @@ After the conda environment is created, download the WIDERFACE dataset. The only
 
 ## Folder Structure
 
-- The direct children folders represent just the raw source codes from the detectors. I will have to take them apart and run them seperately inside the folder `eureca_face`.
+- The direct children folders represent just the raw source codes from the detectors. I will have to take them apart and run them separately inside the folder `eureca_face`.
 - `eureca_face` will contain all the major code that can/will be runnable from a fresh installation. It will hold the evaluation results and processed information.
 - `WIDERFACE` folder will hold ALL of the preprocessed images
 
