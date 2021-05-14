@@ -3,11 +3,11 @@
 ## Table of Contents
 - [Description](#Description)
 - [Abstract](#Abstract)
-- [Face Detectors](#Face_Detectors)
+- [Face Detectors](#face-detectors)
 - [Degradation](#Degradation)
 - [Recovery](#Recovery)
 - [Results](#Results)
-- [Running Code](#Running_Code)
+- [Running Code](#running-code)
 
 
 ![GIF showing animation of an unaltered image, its detection, a degrade image, and a corrected image](./results/graphs/anim_header_1.gif)
@@ -25,6 +25,10 @@ Additionally, we reconstruct the “degraded” image with various image process
 
 
 ## Face Detectors:
+
+![Example of detection with RetinaFace from the RetinaFace authors](./results/graphs/11513D05.jpg)
+
+
 - TinaFace (part of VedaDetector)
 	
 	- **Description:** TinaFace is the SoTA (as of this writing) in terms of realtime face detection on the WIDERFACE testset. The model utilizes recent advancements in general object detection and frames the face detection task as a "small-object" detection task.  
@@ -138,21 +142,40 @@ Gaussian noise had a neutral accuracy decrease "shape". I believe the reason for
 
 You will need to setup a standard Anaconda environment and run the following command to create the same environment that was used to run this code: ``conda env create -f requirements.yaml``
 
-After the conda environment is created, download the WIDERFACE dataset. The only portions you will need are the WIDERFACE validation dataset as well as the evaluation tools. Keep the original class-based folder structure and place both evaluation tool folders and the validation set ("WIDER_val") in a folder called "WIDERFACE".
+You will also need an installation of Matlab (the version used in this project was 2020b but older versions might work). If Matlab is not available, try using **Octane** as an alternative. 
+
+## Dataset Setup
+
+After the conda environment is created, download the [WIDERFACE dataset](http://shuoyang1213.me/WIDERFACE/). 
+
+The only portions you will need are the [WIDERFACE validation dataset](https://drive.google.com/file/d/0B6eKvaijfFUDd3dIRmpvSk8tLUk/view) as well as the [evaluation tools](http://shuoyang1213.me/WIDERFACE/support/eval_script/eval_tools.zip). Keep the original class-based folder structure and place both evaluation tool folders and the validation set ("WIDER_val") in a folder called "WIDERFACE". Copy contents from the `WF_eval_files` into the `eval_tools` folder in WIDERFACE. You should copy the original evaluation files that these files are replacing These modified Matlab files are edited to output the mAP results from the evaluation as a text file rather than plotting the PR curve.
+
 
 ## Folder Structure
 
-- The direct children folders represent just the raw source codes from the detectors. I will have to take them apart and run them separately inside the folder `eureca_face`.
-- `eureca_face` will contain all the major code that can/will be runnable from a fresh installation. It will hold the evaluation results and processed information.
-- `WIDERFACE` folder will hold ALL of the preprocessed images
+- `WIDERFACE` folder will hold the original images and the evaluation tools
+- `NOISES` folder will hold all noises. Each noise folder will hold an intensity, and each intensity folder will contain "images" (the altered images) and "detections" folder with text files in the WIDERFACE format.
+- `CORRECTIONS` folder will hold all possible correction and noise combinations. Each combination holds the correction and noise level folders. Each folder contains the WIDERFACE folder structure with detection files.
 
 ## Setting up CNNs
 
 ### TinaFace
 
+Clone this network's [repository](https://github.com/Media-Smart/vedadet), download the [pretrained weights](https://drive.google.com/file/d/1zU738coEVDBkLBUa4hvJUucL7dcSBT7v/view?usp=sharing) for TinaFace, and place those weights in a newly-created folder called "weights".
+
+`git clone https://github.com/Media-Smart/vedadet`
+
+Merge this repo with the `vedadet` folder in this repo. This repo contains a custom file and configuration file that is constructed 
+
 ### RetinaFace
 
+Clone this network's [repository](https://github.com/deepinsight/insightface), take only the "RetinaFace" folder, rename it to "retinaface", and merge its contents with this project's "retinaface" folder. This project's "retinaface" folder contains a python file that evaluates WIDERFACE  with the original directory structure. Also, download the pretrained weights located in the [RetinaFace README](https://github.com/deepinsight/insightface/tree/master/detection/RetinaFace#retinaface-pretrained-models).
+
+`git clone https://github.com/deepinsight/insightface.git`
+
 ### DSFD
+
+Clone this network's [repository](https://github.com/hukkelas/DSFD-Pytorch-Inference, rename the folder to "dsfd", and merge this folder with this project's "dsfd" folder.
 
 ## Running Evaluations
 
