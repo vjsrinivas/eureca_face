@@ -175,7 +175,7 @@ Clone this network's [repository](https://github.com/deepinsight/insightface), t
 
 ### DSFD
 
-Clone this network's [repository](https://github.com/hukkelas/DSFD-Pytorch-Inference, rename the folder to "dsfd", and merge this folder with this project's "dsfd" folder.
+Clone this network's [repository](https://github.com/hukkelas/DSFD-Pytorch-Inference), rename the folder to "dsfd", and merge this folder with this project's "dsfd" folder.
 
 ## Running Evaluations
 
