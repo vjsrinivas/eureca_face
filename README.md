@@ -39,7 +39,8 @@ Additionally, we reconstruct the “degraded” image with various image process
 
 - DSFD (Dual-Shot Face Detector)
 	
-	- **Description:** DSFD was a model created by 
+	- **Description:** DSFD was a model created by the Tencent Research Group and features a "Feature Enhancement Module", where feature maps are taken through a portion of the network as the "first shot". While going through each stage of the "first shot", the "Feature Enhancement Module" produces a "second shot". Together, they produce a network that can accurately detect small faces within dense crowds.
+	
 	- **Note:** The DSFD used in this project was a optimized version, which was ~9% off the original DSFD WIDERFACE validation score (81% vs 89% on the hard-set). The DSFD network utilizes "better feature learning, progressive loss design, and anchor assign based data augmentation."
 
 ### Degradation
